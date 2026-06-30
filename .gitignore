@@ -1,2 +1,5 @@
 /target
 the.txt
+keypair.json
+.env
+*.log
