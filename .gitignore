@@ -2,4 +2,5 @@
 the.txt
 keypair.json
 .env
-*.logsolana-snapshot-etl/
+*.log
+solana-snapshot-etl/
