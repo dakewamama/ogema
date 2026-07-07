@@ -13,7 +13,6 @@ const USDC:       &str = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 const USDT:       &str = "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB";
 const THRESHOLD:  f64  = 0.001;
 const SWAP_AMT:   u64  = 1_000_000;
-const TIP_LAMPS:  u64  = 10_000;
 const REFRESH_SEC:u64  = 3600;
 
 #[tokio::main]
@@ -49,9 +48,11 @@ async fn main() {
 
         if spread > THRESHOLD && ok {
             let (inp, out) = if usdc > usdt { (USDC, USDT) } else { (USDT, USDC) };
+            let gross_usd = SWAP_AMT as f64 / 1e6 * spread;
+            let tip = tip::calc_usd(gross_usd, usdc.max(1.0));
             match jup::swap_ix(&w, inp, out, SWAP_AMT).await {
-                Some(ix) => match bundle::send(bundle::build(&kp, &rpc, ix, TIP_LAMPS)).await {
-                    Some((id, ep)) => println!("fired {ep} | {id}"),
+                Some(ix) => match bundle::send(bundle::build(&kp, &rpc, ix, tip)).await {
+                    Some((id, ep)) => println!("fired {ep} tip={tip} | {id}"),
                     None           => eprintln!("no endpoint"),
                 },
                 None => eprintln!("jup failed"),
