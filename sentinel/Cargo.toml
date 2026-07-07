@@ -1,0 +1,13 @@
+[package]
+name = "sentinel"
+edition = "2021"
+version = "0.1.0"
+
+[dependencies]
+yellowstone-grpc-client = "12"
+yellowstone-grpc-proto = "12"
+tokio = { version = "1", features = ["full"] }
+anyhow = "1"
+futures = "0.3"
+bs58 = "0.5"
+rustls = { version = "0.23", features = ["ring"] }
