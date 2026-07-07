@@ -1,7 +1,9 @@
 mod bundle;
+mod geyser_trigger;
 mod jup;
 mod puffin;
 mod pyth;
+mod signal;
 mod sentinel_receiver;
 mod tip;
 
@@ -28,6 +30,10 @@ async fn main() {
 
     let (sentinel_tx, mut sentinel_rx) = tokio::sync::mpsc::channel::<sentinel_receiver::Signal>(256);
     tokio::spawn(sentinel_receiver::run(sentinel_tx));
+
+    let (arb_tx, mut arb_rx) = tokio::sync::mpsc::channel::<signal::ArbSignal>(32);
+    let tatum_key = std::env::var("TATUM_KEY").unwrap_or_default();
+    tokio::spawn(geyser_trigger::run(arb_tx, tatum_key, || 0.0));
 
     loop {
         if refreshed.elapsed().as_secs() > REFRESH_SEC {
@@ -60,6 +66,12 @@ async fn main() {
                     None           => eprintln!("no endpoint"),
                 },
                 None => eprintln!("jup failed"),
+            }
+        }
+
+        if ok {
+            if let Ok(sig) = arb_rx.try_recv() {
+                eprintln!("arb signal: dev={:.4}% dir={}", sig.deviation * 100.0, sig.direction);
             }
         }
 
