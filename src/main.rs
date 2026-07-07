@@ -3,6 +3,7 @@ mod geyser_trigger;
 mod jup;
 mod puffin;
 mod pyth;
+mod pyth_shared;
 mod signal;
 mod sentinel_receiver;
 mod tip;
@@ -33,7 +34,11 @@ async fn main() {
 
     let (arb_tx, mut arb_rx) = tokio::sync::mpsc::channel::<signal::ArbSignal>(32);
     let tatum_key = std::env::var("TATUM_KEY").unwrap_or_default();
-    tokio::spawn(geyser_trigger::run(arb_tx, tatum_key, || 0.0));
+    let sol_price_shared = pyth_shared::SharedPrice::new();
+    {
+        let shared = sol_price_shared.clone();
+        tokio::spawn(geyser_trigger::run(arb_tx, tatum_key, move || shared.get()));
+    }
 
     loop {
         if refreshed.elapsed().as_secs() > REFRESH_SEC {
@@ -52,7 +57,9 @@ async fn main() {
         let get = |target: &str| p.iter().find(|(id,_)| id.ends_with(target)).map(|(_,v)| *v).unwrap_or(0.0);
         let usdc = get("94a");
         let usdt = get("53b");
+        let sol  = get("56d");
         let spread = (usdc - usdt).abs();
+        if sol > 0.0 { sol_price_shared.set(sol); }
 
         println!("slot={slot} usdc={usdc:.6} usdt={usdt:.6} spread={spread:.6} leader={why} ok={ok}");
 
