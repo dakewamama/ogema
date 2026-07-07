@@ -1,9 +1,9 @@
 mod bundle;
 mod jup;
 mod puffin;
+mod arb_receiver;
 mod search;
 mod pyth;
-mod pyth_shared;
 mod signal;
 mod sizing;
 mod sentinel_receiver;
@@ -33,8 +33,8 @@ async fn main() {
     let (sentinel_tx, mut sentinel_rx) = tokio::sync::mpsc::channel::<sentinel_receiver::Signal>(256);
     tokio::spawn(sentinel_receiver::run(sentinel_tx));
 
-    let (_arb_tx, mut arb_rx) = tokio::sync::mpsc::channel::<signal::ArbSignal>(32);
-    let sol_price_shared = pyth_shared::SharedPrice::new();
+    let (arb_tx, mut arb_rx) = tokio::sync::mpsc::channel::<signal::ArbSignal>(32);
+    tokio::spawn(arb_receiver::run(arb_tx));
 
     loop {
         if refreshed.elapsed().as_secs() > REFRESH_SEC {
@@ -53,9 +53,7 @@ async fn main() {
         let get = |target: &str| p.iter().find(|(id,_)| id.ends_with(target)).map(|(_,v)| *v).unwrap_or(0.0);
         let usdc = get("94a");
         let usdt = get("53b");
-        let sol  = get("56d");
         let spread = (usdc - usdt).abs();
-        if sol > 0.0 { sol_price_shared.set(sol); }
 
         println!("slot={slot} usdc={usdc:.6} usdt={usdt:.6} spread={spread:.6} leader={why} ok={ok}");
 

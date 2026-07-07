@@ -1,6 +1,5 @@
-/target
-the.txt
+target/
+**/target/
 keypair.json
 .env
 *.log
-solana-snapshot-etl/

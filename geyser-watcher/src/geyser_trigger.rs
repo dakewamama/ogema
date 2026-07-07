@@ -28,7 +28,7 @@ fn account_sub() -> SubscribeRequest {
     let mut accounts = HashMap::new();
     accounts.insert("raydium_vaults".to_string(), SubscribeRequestFilterAccounts {
         account: vec![SOL_VAULT.to_string(), USDC_VAULT.to_string()],
-        owner: vec![], filters: vec![], nonempty_txn_signature: None,
+        owner: vec![], filters: vec![], nonempty_txn_signature: None, cuckoo_accounts_filter: None,
     });
     SubscribeRequest { accounts, commitment: Some(CommitmentLevel::Processed as i32), ..Default::default() }
 }
