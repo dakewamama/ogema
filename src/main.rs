@@ -1,10 +1,11 @@
 mod bundle;
-mod geyser_trigger;
 mod jup;
 mod puffin;
+mod search;
 mod pyth;
 mod pyth_shared;
 mod signal;
+mod sizing;
 mod sentinel_receiver;
 mod tip;
 
@@ -32,13 +33,8 @@ async fn main() {
     let (sentinel_tx, mut sentinel_rx) = tokio::sync::mpsc::channel::<sentinel_receiver::Signal>(256);
     tokio::spawn(sentinel_receiver::run(sentinel_tx));
 
-    let (arb_tx, mut arb_rx) = tokio::sync::mpsc::channel::<signal::ArbSignal>(32);
-    let tatum_key = std::env::var("TATUM_KEY").unwrap_or_default();
+    let (_arb_tx, mut arb_rx) = tokio::sync::mpsc::channel::<signal::ArbSignal>(32);
     let sol_price_shared = pyth_shared::SharedPrice::new();
-    {
-        let shared = sol_price_shared.clone();
-        tokio::spawn(geyser_trigger::run(arb_tx, tatum_key, move || shared.get()));
-    }
 
     loop {
         if refreshed.elapsed().as_secs() > REFRESH_SEC {
@@ -78,7 +74,21 @@ async fn main() {
 
         if ok {
             if let Ok(sig) = arb_rx.try_recv() {
-                eprintln!("arb signal: dev={:.4}% dir={}", sig.deviation * 100.0, sig.direction);
+                let sim: std::sync::Arc<dyn sizing::Simulator> = std::sync::Arc::new(sizing::LocalAmm);
+                match sizing::optimal(sig.clone(), kp.pubkey(), sim).await {
+                    Ok(trial) => {
+                        let (inp, out) = if sig.direction > 0 { (USDC, USDT) } else { (USDT, USDC) };
+                        let t = tip::calc(trial.profit as u64);
+                        match jup::swap_ix(&w, inp, out, trial.amount_in).await {
+                            Some(ix) => match bundle::send(bundle::build(&kp, &rpc, ix, t)).await {
+                                Some((id, ep)) => println!("arb fired {ep} size={} profit={} | {id}", trial.amount_in, trial.profit),
+                                None           => eprintln!("arb: no endpoint"),
+                            },
+                            None => eprintln!("arb: jup failed"),
+                        }
+                    }
+                    Err(e) => eprintln!("arb: sizing {e}"),
+                }
             }
         }
 

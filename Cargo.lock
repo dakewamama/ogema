@@ -2575,11 +2575,13 @@ name = "ogema"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "base64 0.21.7",
  "bincode",
  "bs58 0.5.1",
  "dotenv",
  "env_logger 0.11.11",
+ "futures",
  "jito-sdk-rust",
  "log",
  "regex",
