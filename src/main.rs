@@ -6,6 +6,7 @@ mod search;
 mod pyth;
 mod pump_buy;
 mod pump_sell;
+mod exit_monitor;
 mod signal;
 mod sizing;
 mod sentinel_receiver;
