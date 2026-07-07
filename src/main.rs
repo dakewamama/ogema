@@ -4,6 +4,8 @@ mod puffin;
 mod arb_receiver;
 mod search;
 mod pyth;
+mod pump_buy;
+mod pump_sell;
 mod signal;
 mod sizing;
 mod sentinel_receiver;
