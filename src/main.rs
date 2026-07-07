@@ -2,6 +2,7 @@ mod bundle;
 mod jup;
 mod puffin;
 mod pyth;
+mod sentinel_receiver;
 mod tip;
 
 use solana_client::rpc_client::RpcClient;
@@ -24,6 +25,9 @@ async fn main() {
 
     let mut delays    = puffin::load().await;
     let mut refreshed = std::time::Instant::now();
+
+    let (sentinel_tx, mut sentinel_rx) = tokio::sync::mpsc::channel::<sentinel_receiver::Signal>(256);
+    tokio::spawn(sentinel_receiver::run(sentinel_tx));
 
     loop {
         if refreshed.elapsed().as_secs() > REFRESH_SEC {
@@ -56,6 +60,12 @@ async fn main() {
                     None           => eprintln!("no endpoint"),
                 },
                 None => eprintln!("jup failed"),
+            }
+        }
+
+        if ok {
+            if let Ok(sig) = sentinel_rx.try_recv() {
+                eprintln!("sentinel signal: wallet={} lamports={} slot={}", sig.pubkey, sig.lamports, sig.slot);
             }
         }
 
